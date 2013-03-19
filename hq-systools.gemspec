@@ -21,6 +21,9 @@ Gem::Specification.new do
 
 	spec.rubyforge_project = "hq-systools"
 
+	spec.add_dependency "hq-tools", ">= 0.1.1"
+	spec.add_dependency "libxml-ruby", ">= 2.6.0"
+	spec.add_dependency "multi_json", ">= 1.6.1"
 	spec.add_dependency "rake", ">= 10.0.3"
 
 	spec.add_development_dependency "cucumber", ">= 1.2.1"
@@ -29,19 +32,18 @@ Gem::Specification.new do
 	spec.add_development_dependency "simplecov"
 
 	spec.files = Dir[
-
-		"features/**/*.feature",
-		"features/**/*.rb",
-
-		"ruby/**/*.rb",
-
+		"lib/**/*.rb",
 	]
 
-	spec.test_files = []
+	spec.test_files = Dir[
+		"features/**/*.feature",
+		"features/**/*.rb",
+		"spec/**/*-spec.rb",
+	]
 
 	spec.executables = []
 
-	spec.require_paths = [ "ruby" ]
+	spec.require_paths = [ "lib" ]
 
 end
 

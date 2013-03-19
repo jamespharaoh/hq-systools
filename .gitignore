@@ -1,0 +1,5 @@
+/.bundle
+/.gems
+/.stubs
+/results
+/*.gem
