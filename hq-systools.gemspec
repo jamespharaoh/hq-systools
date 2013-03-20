@@ -21,8 +21,10 @@ Gem::Specification.new do
 
 	spec.rubyforge_project = "hq-systools"
 
+	spec.add_dependency "bson_ext", ">= 1.8.2"
 	spec.add_dependency "hq-tools", ">= 0.1.1"
 	spec.add_dependency "libxml-ruby", ">= 2.6.0"
+	spec.add_dependency "mongo", ">= 1.8.2"
 	spec.add_dependency "multi_json", ">= 1.6.1"
 	spec.add_dependency "rake", ">= 10.0.3"
 

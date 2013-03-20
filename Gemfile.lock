@@ -2,14 +2,19 @@ PATH
   remote: .
   specs:
     hq-systools (0.0.0)
+      bson_ext (>= 1.8.2)
       hq-tools (>= 0.1.1)
       libxml-ruby (>= 2.6.0)
+      mongo (>= 1.8.2)
       multi_json (>= 1.6.1)
       rake (>= 10.0.3)
 
 GEM
   remote: https://rubygems.org/
   specs:
+    bson (1.8.3)
+    bson_ext (1.8.3)
+      bson (~> 1.8.3)
     builder (3.2.0)
     cucumber (1.2.3)
       builder (>= 2.1.2)
@@ -23,6 +28,8 @@ GEM
       rake (>= 10.0.3)
     json (1.7.7)
     libxml-ruby (2.6.0)
+    mongo (1.8.3)
+      bson (~> 1.8.3)
     multi_json (1.7.0)
     rake (10.0.3)
     rspec (2.13.0)
