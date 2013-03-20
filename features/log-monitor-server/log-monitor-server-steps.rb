@@ -13,7 +13,9 @@ Before do
 end
 
 def mongo_db_name name
-	@db_names << name unless @db_names.include? name
+	if @db_names
+		@db_names << name unless @db_names.include? name
+	end
 	$db_names << name unless $db_names.include? name
 	"cuke_#{$token}_#{name}"
 end
@@ -44,7 +46,14 @@ After do
 end
 
 at_exit do
-	raise "TODO" # delete databases
+
+	$db_names.each do
+		|db_name|
+
+		mongo_conn.drop_database mongo_db_name(db_name)
+
+	end
+
 end
 
 # step definitions
