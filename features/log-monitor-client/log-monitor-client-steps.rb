@@ -90,6 +90,18 @@ Given /^I have updated file "(.*?)" without changing the timestamp:$/ do
 
 end
 
+Given /^I have updated file "(.*?)" changing the timestamp:$/ do
+	|file_name, file_contents|
+
+	file_mtime = File.mtime file_name
+
+	write_file file_name, file_contents
+
+	file_atime = File.atime file_name
+	File.utime file_atime, file_mtime + 1, file_name
+
+end
+
 When /^I have run log\-monitor\-client with config "(.*?)"$/ do
 	|config_name|
 

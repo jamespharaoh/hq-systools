@@ -1,4 +1,4 @@
-Feature: Log monitor client does not open files whose timestamps have not changed
+Feature: Log monitor client does skips files which don't appear to have changed
 
   Background:
 
@@ -22,16 +22,15 @@ Feature: Log monitor client does not open files whose timestamps have not change
     When I run log-monitor-client with config "default.config"
     Then no events should be submitted
 
-  Scenario: Timestamp changed
+  Scenario: Timestamp changed, size unchanged
 
     Given a file "logfile.log":
       """
-      NOTICE This is a notice
+      NOTICE This is a notice [padding]
       """
     And I have run log-monitor-client with config "default.config"
-    And I have updated file "logfile.log":
+    And I have updated file "logfile.log" changing the timestamp:
       """
-      NOTICE This is a notice
       CRITICAL This is a critical error
       """
 
@@ -42,14 +41,16 @@ Feature: Log monitor client does not open files whose timestamps have not change
       {
         type: critical,
         source: { class: class, host: host, service: service },
-        location: { file: logfile.log, line: 1 },
-        prefix: [],
-        line: "CRITICAL This is a critical error",
-        suffix: [],
+        location: { file: logfile.log, line: 0 },
+        lines: {
+          before: [],
+          matching: CRITICAL This is a critical error,
+          after: [],
+        },
       }
       """
 
-  Scenario: Timestamp unchanged
+  Scenario: Size changed, timestamp unchanged
 
     Given a file "logfile.log":
       """
@@ -58,7 +59,34 @@ Feature: Log monitor client does not open files whose timestamps have not change
     And I have run log-monitor-client with config "default.config"
     And I have updated file "logfile.log" without changing the timestamp:
       """
-      NOTICE This is a notice
+      CRITICAL This is a critical error
+      """
+
+    When I run log-monitor-client with config "default.config"
+
+    Then the following events should be submitted:
+      """
+      {
+        type: critical,
+        source: { class: class, host: host, service: service },
+        location: { file: logfile.log, line: 0 },
+        lines: {
+          before: [],
+          matching: CRITICAL This is a critical error,
+          after: [],
+        },
+      }
+      """
+
+  Scenario: Size and timestamp unchanged
+
+    Given a file "logfile.log":
+      """
+      NOTICE This is a notice [padding]
+      """
+    And I have run log-monitor-client with config "default.config"
+    And I have updated file "logfile.log" without changing the timestamp:
+      """
       CRITICAL This is a critical error
       """
 

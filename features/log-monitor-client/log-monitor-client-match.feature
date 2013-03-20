@@ -43,9 +43,11 @@ Feature: Log monitor client correctly reports matching lines
          type: warning,
          source: { class: class, host: host, service: service },
          location: { file: logfile.log, line: 0 },
-         prefix: [],
-         line: "WARNING This is a warning",
-         suffix: [],
+         lines: {
+           before: [],
+           matching: WARNING This is a warning,
+           after: [],
+         },
        }
        """
 
@@ -64,8 +66,10 @@ Feature: Log monitor client correctly reports matching lines
         type: critical,
         source: { class: class, host: host, service: service },
         location: { file: logfile.log, line: 0 },
-        prefix: [],
-        line: "CRITICAL WARNING This is a confused log entry",
-        suffix: [],
+        lines: {
+          before: [],
+          matching: CRITICAL WARNING This is a confused log entry,
+          after: [],
+        },
       }
       """
