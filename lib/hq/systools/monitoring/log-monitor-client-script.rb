@@ -17,7 +17,9 @@ class LogMonitorClientScript
 	def main
 		process_args
 		read_config
+		read_cache
 		perform_checks
+		write_cache
 	end
 
 	def process_args
@@ -43,6 +45,9 @@ class LogMonitorClientScript
 		@config_elem =
 			config_doc.root
 
+		@cache_elem =
+			@config_elem.find_first("cache")
+
 		@client_elem =
 			@config_elem.find_first("client")
 
@@ -51,6 +56,42 @@ class LogMonitorClientScript
 
 		@service_elems =
 			@config_elem.find("service").to_a
+
+	end
+
+	def read_cache
+
+		cache_path = @cache_elem["path"]
+
+		if File.exist? cache_path
+
+			@cache =
+				YAML.load File.read cache_path
+
+		else
+
+			@cache = {
+				files: {},
+			}
+
+		end
+
+	end
+
+	def write_cache
+
+		cache_path = @cache_elem["path"]
+		cache_temp_path = "#{cache_path}.new"
+
+		File.open cache_temp_path, "w" do
+			|cache_temp_io|
+
+			cache_temp_io.write YAML.dump @cache
+			cache_temp_io.fsync
+
+		end
+
+		File.rename cache_temp_path, cache_path
 
 	end
 
@@ -80,6 +121,15 @@ class LogMonitorClientScript
 				file_names.each do
 					|file_name|
 
+					file_mtime = File.mtime file_name
+
+					cache_file = @cache[:files][file_name]
+
+					if cache_file && file_mtime == cache_file[:mtime]
+					puts "SKIPPING"
+						next
+					end
+
 					File.open file_name, "r" do
 						|file_io|
 
@@ -96,8 +146,6 @@ class LogMonitorClientScript
 									|match_elem|
 									line =~ /#{match_elem["regex"]}/
 								}
-
-							next unless match_elem
 
 							# report the match
 
@@ -124,6 +172,10 @@ class LogMonitorClientScript
 						end
 
 					end
+
+					@cache[:files][file_name] = {
+						mtime: file_mtime,
+					}
 
 				end
 

@@ -17,6 +17,11 @@ $web_server =
 	WEBrick::HTTPServer.new \
 		$web_config
 
+$web_server_url =
+	"http://localhost:%s/submit-log-event" % [
+		$web_config[:Port],
+	]
+
 Thread.new do
 	$web_server.start
 end
@@ -34,85 +39,81 @@ $web_server.mount_proc "/submit-log-event" do
 
 end
 
-# initialisation
+# set up and tear down
 
 Before do
 
-	@configs = {}
-	@logfiles = {}
+	$events_received = []
+
+	@old_dir = Dir.pwd
+	@temp_dir = Dir.mktmpdir
+	Dir.chdir @temp_dir
+
+end
+
+After do
+
+	FileUtils.remove_entry_secure @temp_dir
+	Dir.chdir @old_dir
+
+end
+
+# steps
+
+def write_file file_name, file_contents
+
+	file_contents.gsub! "${server-url}", $web_server_url
+
+	File.open file_name, "w" do
+		|file_io|
+		file_io.print file_contents
+	end
+
+end
+
+Given /^(?:I have updated|a) file "(.*?)":$/ do
+	|file_name, file_contents|
+
+	write_file file_name, file_contents
+
+end
+
+Given /^I have updated file "(.*?)" without changing the timestamp:$/ do
+	|file_name, file_contents|
+
+	file_mtime = File.mtime file_name
+
+	write_file file_name, file_contents
+
+	file_atime = File.atime file_name
+	File.utime file_atime, file_mtime, file_name
+
+end
+
+When /^I have run log\-monitor\-client with config "(.*?)"$/ do
+	|config_name|
+
+	script = HQ::SysTools::Monitoring::LogMonitorClientScript.new
+
+	script.stdout = File.open "/dev/null", "w"
+	script.stderr = File.open "/dev/null", "w"
+
+	script.args = [ "--config", config_name ]
+	script.main
+		
+end
+
+When /^I run log\-monitor\-client with config "(.*?)"$/ do
+	|config_name|
 
 	@script = HQ::SysTools::Monitoring::LogMonitorClientScript.new
 
 	@script.stdout = StringIO.new
 	@script.stderr = StringIO.new
 
-	$events_received = []
-
-end
-
-# steps
-
-Given /^a config file "(.*?)":$/ do
-	|config_name, config_contents|
-	@configs[config_name] = config_contents
-
-end
-
-Given /^a logfile "(.*?)":$/ do
-	|logfile_name, logfile_contents|
-	@logfiles[logfile_name] = logfile_contents
-end
-
-When /^I run log\-monitor\-client with config "(.*?)"$/ do
-	|config_name|
-
-	# work in a temporary dir
-
-	Dir.mktmpdir do
-		|temp_dir|
-
-		Dir.chdir temp_dir
-
-		# write log files
-
-		@logfiles.each do
-			|logfile_name, logfile_contents|
-
-			File.open logfile_name, "w" do
-				|logfile_io|
-
-				logfile_io.print logfile_contents
-
-			end
-
-		end
-
-		# write config file
-
-		Tempfile.open "log-monitor-client-steps-" do
-			|config_temp|
-
-			config_content = @configs[config_name]
-
-			server_url =
-				"http://localhost:%s/submit-log-event" % [
-					$web_config[:Port],
-				]
-
-			config_content.gsub! "${server-url}", server_url
-
-			config_temp.print config_content
-			config_temp.flush
-
-			# run script
-
-			@script.args = [ "--config", config_temp.path ]
-			@script.main
-
-		end
+	@script.args = [ "--config", config_name ]
+	@script.main
 		
-	end
-
 end
 
 Then /^no events should be submitted$/ do
@@ -124,4 +125,3 @@ Then /^the following events should be submitted:$/ do
 	events_expected = YAML.load "[#{events_str}]"
 	$events_received.should == events_expected
 end
-

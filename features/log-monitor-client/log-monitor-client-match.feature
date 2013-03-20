@@ -1,14 +1,15 @@
-Feature: Log monitor client
+Feature: Log monitor client correctly reports matching lines
 
   Background:
-    Given a config file "default":
+    Given a file "default.config":
       """
       <log-monitor-client-config>
+        <cache path="cache"/>
         <client class="class" host="host"/>
         <server url="${server-url}"/>
         <service name="service">
           <fileset>
-            <scan glob="*"/>
+            <scan glob="*.log"/>
             <match type="critical" regex="CRITICAL"/>
             <match type="warning" regex="WARNING"/>
           </fileset>
@@ -17,25 +18,31 @@ Feature: Log monitor client
       """
 
   Scenario: Ignore lines which don't match any pattern
-    Given a logfile "logfile":
+
+    Given a file "logfile.log":
        """
        NOTICE Not an error
        """
-     When I run log-monitor-client with config "default"
+
+     When I run log-monitor-client with config "default.config"
+
      Then no events should be submitted
 
   Scenario: Produce events for lines which match a pattern
-    Given a logfile "logfile":
+
+    Given a file "logfile.log":
        """
        WARNING This is a warning
        """
-     When I run log-monitor-client with config "default"
+
+     When I run log-monitor-client with config "default.config"
+
      Then the following events should be submitted:
        """
        {
          type: warning,
          source: { class: class, host: host, service: service },
-         location: { file: logfile, line: 0 },
+         location: { file: logfile.log, line: 0 },
          prefix: [],
          line: "WARNING This is a warning",
          suffix: [],
@@ -43,19 +50,22 @@ Feature: Log monitor client
        """
 
   Scenario: Only produce an event for the first matched pattern
-    Given a logfile "logfile":
+
+    Given a file "logfile.log":
        """
        CRITICAL WARNING This is a confused log entry
        """
-     When I run log-monitor-client with config "default"
-     Then the following events should be submitted:
-       """
-       {
-         type: critical,
-         source: { class: class, host: host, service: service },
-         location: { file: logfile, line: 0 },
-         prefix: [],
-         line: "CRITICAL WARNING This is a confused log entry",
-         suffix: [],
-       }
-       """
+
+    When I run log-monitor-client with config "default.config"
+
+    Then the following events should be submitted:
+      """
+      {
+        type: critical,
+        source: { class: class, host: host, service: service },
+        location: { file: logfile.log, line: 0 },
+        prefix: [],
+        line: "CRITICAL WARNING This is a confused log entry",
+        suffix: [],
+      }
+      """
