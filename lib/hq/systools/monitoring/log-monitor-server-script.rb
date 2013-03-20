@@ -1,3 +1,5 @@
+require "rack"
+
 module HQ
 module SysTools
 module Monitoring
@@ -87,17 +89,19 @@ class LogMonitorServerScript
 			WEBrick::HTTPServer.new \
 				@web_config
 
-		@web_server.mount_proc \
-			"/submit-log-event",
-			method(:submit_log_event)
+		@web_server.mount "/", Rack::Handler::WEBrick, self
 
 	end
 
-	def submit_log_event request, response
+	def call env
+		submit_log_event env
+	end
+
+	def submit_log_event env
 
 		# decode it
 
-		event = MultiJson.load request.body
+		event = MultiJson.load env["rack.input"].read
 
 		# add a timestamp
 
@@ -133,7 +137,7 @@ class LogMonitorServerScript
 
 		# respond successfully
 
-		response.status = "202"
+		return 202, {}, []
 
 	end
 
