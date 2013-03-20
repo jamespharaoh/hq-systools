@@ -1,3 +1,4 @@
+require "capybara/cucumber"
 require "mongo"
 
 require "hq/systools/monitoring/log-monitor-server-script"
@@ -81,9 +82,12 @@ Given /^the log monitor server config:$/ do |config_string|
 	@log_monitor_server_script.args = [
 		"--config",
 		@log_monitor_server_config.path,
+		"--quiet",
 	]
 
 	@log_monitor_server_script.start
+
+	Capybara.app = @log_monitor_server_script
 
 end
 
@@ -154,3 +158,12 @@ Then /^the summary should show:$/ do
 
 end
 
+# ui steps
+
+When /^I visit the overview page$/ do
+	visit "/"
+end
+
+Then /^I should see no summaries$/ do
+	page.should have_content "No events have been logged"
+end

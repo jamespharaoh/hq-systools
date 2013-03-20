@@ -2,4 +2,5 @@
 /.gems
 /.stubs
 /results
+/test-configs
 /*.gem

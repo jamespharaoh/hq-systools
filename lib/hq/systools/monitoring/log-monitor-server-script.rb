@@ -1,4 +1,9 @@
+require "mongo"
 require "rack"
+require "webrick"
+require "xml"
+
+require "hq/tools/getopt"
 
 module HQ
 module SysTools
@@ -8,8 +13,15 @@ class LogMonitorServerScript
 	attr_accessor :args
 	attr_accessor :status
 
+	def initialize
+		@status = 0
+	end
+
 	def main
 		setup
+		trap "INT" do
+			@web_server.shutdown
+		end
 		run
 	end
 
@@ -40,6 +52,9 @@ class LogMonitorServerScript
 
 			{ :name => :config,
 				:required => true },
+
+			{ :name => :quiet,
+				:boolean => true },
 
 		]
 
@@ -81,9 +96,14 @@ class LogMonitorServerScript
 		@web_config = {
 			:Port => @server_elem["port"].to_i,
 			:AccessLog => [],
-			:Logger => WEBrick::Log::new("/dev/null", 7),
-			:DoNotReverseLookup => true,
 		}
+
+		if @opts[:quiet]
+			@web_config.merge!({
+				:Logger => WEBrick::Log::new("/dev/null", 7),
+				:DoNotReverseLookup => true,
+			})
+		end
 
 		@web_server =
 			WEBrick::HTTPServer.new \
@@ -94,7 +114,20 @@ class LogMonitorServerScript
 	end
 
 	def call env
-		submit_log_event env
+
+		case env["PATH_INFO"]
+
+		when "/submit-log-event"
+			submit_log_event env
+
+		when "/"
+			overview env
+
+		else
+			raise "Not found"
+
+		end
+
 	end
 
 	def submit_log_event env
@@ -138,6 +171,33 @@ class LogMonitorServerScript
 		# respond successfully
 
 		return 202, {}, []
+
+	end
+
+	def overview env
+
+		headers = {}
+		html = []
+
+		headers["content-type"] = "text/html"
+
+		html << "<! DOCTYPE html>\n"
+		html << "<html>\n"
+		html << "<head>\n"
+
+		html << "<title>Overview - Log monitor</title>\n"
+
+		html << "</head>\n"
+		html << "<body>\n"
+
+		html << "<h1>Overview - Log monitor</h1>\n"
+
+		html << "<p>No events have been logged</p>\n"
+
+		html << "</body>\n"
+		html << "</html>\n"
+
+		return 200, headers, html
 
 	end
 

@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+
+require "hq/systools/monitoring/log-monitor-server-script"
+
+script = HQ::SysTools::Monitoring::LogMonitorServerScript.new
+script.args = ARGV
+script.main
+exit script.status
