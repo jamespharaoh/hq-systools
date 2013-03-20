@@ -163,25 +163,20 @@ class LogMonitorClientScript
 						# check if the file has changed
 
 						if cache_file
-pp cache_file
 
 							if file_size < cache_file[:size]
 
-puts "CHANGED0"
 								changed = true
 
 							else
 
 								changed = false
 
-puts "LINES: #{cache_file[:lines]}"
 								cache_file[:lines].times do
 
 									line = file_reader.gets
-puts "LINE"
 
 									unless line
-puts "CHANGED1"
 										changed = true
 										break
 									end
@@ -191,7 +186,6 @@ puts "CHANGED1"
 								end
 
 								if file_hash != cache_file[:hash]
-puts "CHANGED2 #{file_hash} #{cache_file[:hash]}"
 									changed = true
 								end
 
