@@ -27,10 +27,10 @@ class LogMonitorClientScript
 		@opts, @args =
 			Tools::Getopt.process @args, [
 
-				{ :name => :config,
-					:required => true },
+			{ :name => :config,
+				:required => true },
 
-			]
+		]
 
 		@args.empty? \
 			or raise "Extra args on command line"
@@ -136,7 +136,7 @@ class LogMonitorClientScript
 					file_mtime = File.mtime file_name
 					file_size = File.size file_name
 
-					# skip files which haven't been modified
+					# fast check for modified files
 
 					cache_file = @cache[:files][file_name]
 
@@ -148,6 +148,8 @@ class LogMonitorClientScript
 
 					# scan the file for matching lines
 
+					mode = cache_file ? :scan : :report
+
 					File.open file_name, "r" do
 						|file_io|
 
@@ -156,9 +158,60 @@ class LogMonitorClientScript
 								file_io,
 								max_before + max_after + 1
 
-						line_number = 0
+						file_hash = 0
+
+						# check if the file has changed
+
+						if cache_file
+pp cache_file
+
+							if file_size < cache_file[:size]
+
+puts "CHANGED0"
+								changed = true
+
+							else
+
+								changed = false
+
+puts "LINES: #{cache_file[:lines]}"
+								cache_file[:lines].times do
+
+									line = file_reader.gets
+puts "LINE"
+
+									unless line
+puts "CHANGED1"
+										changed = true
+										break
+									end
+
+									file_hash = [ file_hash, line.hash ].hash
+
+								end
+
+								if file_hash != cache_file[:hash]
+puts "CHANGED2 #{file_hash} #{cache_file[:hash]}"
+									changed = true
+								end
+
+							end
+
+						end
+
+						# go back to start if it changed
+
+						if changed
+							file_io.seek 0
+							file_reader.reset
+							file_hash = 0
+						end
+
+						# scan the new part of the file
 
 						while line = file_reader.gets
+
+							file_hash = [ file_hash, line.hash ].hash
 
 							# check for a match
 
@@ -208,14 +261,16 @@ class LogMonitorClientScript
 
 						end
 
+						# save the file's current info in the cache
+
+						@cache[:files][file_name] = {
+							mtime: file_mtime,
+							size: file_size,
+							lines: file_reader.next_line_number,
+							hash: file_hash,
+						}
+
 					end
-
-					# save the file's current info in the cache
-
-					@cache[:files][file_name] = {
-						mtime: file_mtime,
-						size: file_size,
-					}
 
 				end
 
@@ -249,13 +304,11 @@ class LogMonitorClientScript
 		def initialize source, buffer_size
 
 			@source = source
-
 			@buffer_size = buffer_size
-			@buffer_start = 0
-			@buffer_cursor = 0
-			@buffer_end = 0
 
 			@buffer = Array.new @buffer_size
+
+			reset
 
 		end
 
@@ -333,6 +386,12 @@ class LogMonitorClientScript
 
 		def next_line_number
 			@buffer_cursor
+		end
+
+		def reset
+			@buffer_start = 0
+			@buffer_cursor = 0
+			@buffer_end = 0
 		end
 
 	end

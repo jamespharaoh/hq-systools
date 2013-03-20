@@ -118,6 +118,8 @@ end
 When /^I run log\-monitor\-client with config "(.*?)"$/ do
 	|config_name|
 
+	$events_received = []
+
 	@script = HQ::SysTools::Monitoring::LogMonitorClientScript.new
 
 	@script.stdout = StringIO.new
