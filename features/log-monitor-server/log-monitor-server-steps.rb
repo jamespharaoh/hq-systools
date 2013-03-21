@@ -59,7 +59,8 @@ end
 
 # step definitions
 
-Given /^the log monitor server config:$/ do |config_string|
+Given /^the log monitor server config:$/ do
+	|config_string|
 
 	# write config file
 
@@ -67,6 +68,8 @@ Given /^the log monitor server config:$/ do |config_string|
 
 	@log_monitor_server_config =
 		Tempfile.new "cuke-log-monitor-server-"
+
+	config_string = config_string.clone
 
 	config_string.gsub! "${port}", @log_monitor_server_port.to_s
 	config_string.gsub! "${db-host}", "localhost"
@@ -101,23 +104,29 @@ After do
 
 end
 
-When /^I submit the following event:$/ do
+When /^I submit the following events?:$/ do
 	|event_string|
 
-	event_data = YAML.load event_string
-	event_json = MultiJson.dump event_data
+	events_data = YAML.load "[#{event_string}]"
 
-	Net::HTTP.start "localhost", @log_monitor_server_port do
-		|http|
+	events_data.each do
+		|event_data|
 
-		request = Net::HTTP::Post.new "/submit-log-event"
-		request.body = event_json
+		event_json = MultiJson.dump event_data
 
-		@http_response = http.request request
+		Net::HTTP.start "localhost", @log_monitor_server_port do
+			|http|
+
+			request = Net::HTTP::Post.new "/submit-log-event"
+			request.body = event_json
+
+			@http_response = http.request request
+
+		end
 
 	end
 
-	@submitted_event = event_data
+	@submitted_events = events_data
 
 end
 
@@ -138,7 +147,7 @@ Then /^the event should be in the database$/ do
 	event.delete "_id"
 	event.delete "timestamp"
 
-	event.should == @submitted_event
+	event.should == @submitted_events.first
 
 end
 
@@ -166,4 +175,26 @@ end
 
 Then /^I should see no summaries$/ do
 	page.should have_content "No events have been logged"
+end
+
+Then /^I should see (\d+) summar(?:y|ies)$/ do
+	|count_str|
+	count = count_str.to_i
+	find("#summaries").should have_css(".summary", :count => count)
+end
+
+Then /^the (\d+(?:st|nd|rd|th)) summary should be:$/ do
+	|index_str, fields|
+
+	index = index_str.to_i
+
+	within "#summaries" do
+
+		fields.hashes.each do
+			|row|
+			find(".#{row["name"]}").text.should == row["value"]
+		end
+
+	end
+
 end
